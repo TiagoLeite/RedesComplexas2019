@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from pyunicorn.timeseries.visibility_graph import VisibilityGraph
 from networkx.utils.rcm import *
 import networkx as nx
+import cv2 as cv
 
 data = pd.read_csv('signal.csv')
 # print(data.describe())
@@ -73,6 +74,10 @@ plt.imshow(adj2, cmap='gray')
 
 plt.subplot(2, 2, 3)
 plt.imshow(nx.adjacency_matrix(g1).toarray(), cmap='gray')
+
+plt.imsave('g1.png', nx.adjacency_matrix(g1).toarray(), cmap='gray')
+plt.imsave('g2.png', nx.adjacency_matrix(g2).toarray(), cmap='gray')
+
 
 plt.subplot(2, 2, 4)
 plt.imshow(nx.adjacency_matrix(g2).toarray(), cmap='gray')

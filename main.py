@@ -1,20 +1,21 @@
 import numpy as np
 import pandas as pd
-from igraph import *
+# from jgraph import *
 import seaborn as sns
 import matplotlib.pyplot as plt
-from pyunicorn.timeseries.visibility_graph import VisibilityGraph
+# from pyunicorn.timeseries.visibility_graph import VisibilityGraph
 from networkx.utils.rcm import *
 import networkx.generators as gen
 import networkx as nx
 import uuid
 import random
-from node2vec import Node2Vec
+# from node2vec import Node2Vec
+
 
 random.seed(29)
 
 
-def save_image_graph_from_series(series, label):
+'''def save_image_graph_from_series(series, label):
     g = VisibilityGraph(series)
     adj = g.adjacency
     g = nx.Graph(incoming_graph_data=adj)
@@ -33,7 +34,7 @@ def build_image_dataset():
         print(index, 'of', total)
         label = row[-1]
         series = np.array(row[1:-1])
-        save_image_graph_from_series(series, label)
+        save_image_graph_from_series(series, label)'''
 
 
 def avg_degree(g):
@@ -93,18 +94,22 @@ def build_graphs():
     total_graphs = len(graph_data['graph_id'].unique())
     print(total_graphs)
     last_id = -1
-    all_graps = []
+    all_graps1, all_graps2 = [], []
     total = len(edges)
     for index, row in edges.iterrows():
         print(index, 'of', total)
         node1 = int(row['node1'])
         node2 = int(row['node2'])
-        graph_id = graph_data[graph_data['node_id'] == node1].iloc[0]['graph_id']
-
+        graph_id, graph_class = graph_data[graph_data['node_id'] == node1].iloc[0][['graph_id', 'class']]
+        # graph_class = graph_data[graph_data['node_id'] == node1].iloc[0]['class']
         if last_id != graph_id:
             last_id = graph_id
             current_graph = nx.Graph()
-            all_graps.append(current_graph)
+
+            if graph_class == 1:
+                all_graps1.append(current_graph)
+            else:
+                all_graps2.append(current_graph)
 
         if node1 not in current_graph:
             current_graph.add_node(node1)
@@ -114,17 +119,35 @@ def build_graphs():
 
         current_graph.add_edge(node1, node2)
 
-    return all_graps
+    return all_graps1, all_graps2
 
 
-graphs = build_graphs()
+graphs1, graphs2 = build_graphs()
 
-print("Total graphs:", len(graphs))
-nodes_avg = [len(g.nodes) for g in graphs]
-print(sorted(nodes_avg))
-nodes_avg = sorted(nodes_avg)
-unique, counts = np.unique(nodes_avg, return_counts=True)
-print(np.asarray((unique, counts)).T)
+print("Total graphs:", len(graphs1) + len(graphs2))
+#nodes_avg = [len(g.nodes) for g in graphs]
+#print(sorted(nodes_avg))
+#nodes_avg = sorted(nodes_avg)
+#unique, counts = np.unique(nodes_avg, return_counts=True)
+#print(np.asarray((unique, counts)).T)
+
+k = 0
+for g in graphs1:
+    rcm = list(reverse_cuthill_mckee_ordering(g))
+    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
+    plt.imsave('protein_img/1/' + str(k) + '.jpg', g_adj, cmap='gray')
+    k += 1
+
+
+k = 0
+for g in graphs2:
+    rcm = list(reverse_cuthill_mckee_ordering(g))
+    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
+    plt.imsave('protein_img/2/' + str(k) + '.jpg', g_adj, cmap='gray')
+    k += 1
+
+
+
 
 '''
 for g in graphs:

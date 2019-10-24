@@ -10,9 +10,9 @@ from keras.applications.mobilenet_v2 import MobileNetV2
 from keras import backend as K
 import cv2 as cv
 
-random.seed(29)
-N_CLASSES = 4
-BATCH_SIZE = 64
+# random.seed(29)
+N_CLASSES = 2
+BATCH_SIZE = 32
 
 
 def precision_score(y_true, y_pred):
@@ -51,25 +51,30 @@ def get_mobilenet_model():
 
 
 def get_model():
-    input_layer = Input(shape=[178, 178, 3])
-    x = Conv2D(filters=8, kernel_size=(5, 5), strides=(1, 1), padding='same', activation='relu')(input_layer)
-    x = BatchNormalization()(x)
-    x = Conv2D(filters=8, kernel_size=(5, 5), strides=(2, 2), padding='same', activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Conv2D(filters=16, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = BatchNormalization()(x)
-    x = Conv2D(filters=16, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    input_layer = Input(shape=[None, None, 3])
+
+    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(input_layer)
     x = BatchNormalization()(x)
     x = Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
+    x = BatchNormalization()(x)
+    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    x = BatchNormalization()(x)
     x = Conv2D(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Flatten()(x)
+    x = BatchNormalization()(x)
+    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=512, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    x = BatchNormalization()(x)
+    x = GlobalMaxPooling2D()(x)
     x = Dense(units=128, activation='relu')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(units=64, activation='relu')(x)
     x = Dropout(0.5)(x)
     output = Dense(N_CLASSES, activation='softmax')(x)
     model = Model(input=input_layer, output=output)
     model.compile(loss='categorical_crossentropy', optimizer='adam',
                   metrics=['accuracy', precision_score, recall_score])
+
     return model
 
 
@@ -82,16 +87,23 @@ print(model.summary())
 
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
                               patience=5, min_lr=0.00001)
+
 datagen = ImageDataGenerator(preprocessing_function=None,
-                             rescale=1.0 / 255.0, validation_split=0.2)
-train_gen = datagen.flow_from_directory('img/', target_size=(178, 178),
+                             rescale=1.0/255.0,
+                             # horizontal_flip=True,
+                             # vertical_flip=True,
+                             validation_split=0.2)
+
+train_gen = datagen.flow_from_directory('protein_img/',
                                         batch_size=BATCH_SIZE,
                                         subset='training',
                                         color_mode='rgb')
-test_gen = datagen.flow_from_directory('img/', target_size=(178, 178),
+
+test_gen = datagen.flow_from_directory('protein_img/',
                                        batch_size=BATCH_SIZE,
                                        subset='validation',
                                        color_mode='rgb')
+
 model.fit_generator(train_gen, steps_per_epoch=train_gen.samples // BATCH_SIZE + 1,
                     validation_data=test_gen,
                     validation_steps=test_gen.samples // BATCH_SIZE + 1,

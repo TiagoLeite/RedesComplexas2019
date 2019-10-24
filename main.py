@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 # from jgraph import *
-import seaborn as sns
+# import seaborn as sns
 import matplotlib.pyplot as plt
 # from pyunicorn.timeseries.visibility_graph import VisibilityGraph
 from networkx.utils.rcm import *
@@ -48,6 +48,7 @@ def avg_degree(g):
 
 
 def generate_networks():
+
     for k in range(1000):
         print(k)
 
@@ -89,12 +90,12 @@ def parse_files():
 
 
 def build_graphs():
-    graph_data = pd.read_csv('graph_data/proteins/node_graph_class.csv')
-    edges = pd.read_csv('graph_data/proteins/PROTEINS_full_A.csv')
+    graph_data = pd.read_csv('imdb/IMDB-MULTI_node_graph_class.csv')
+    edges = pd.read_csv('imdb/IMDB-MULTI_A.csv')
     total_graphs = len(graph_data['graph_id'].unique())
     print(total_graphs)
     last_id = -1
-    all_graps1, all_graps2 = [], []
+    all_graps1, all_graps2, all_graps3 = [], [], []
     total = len(edges)
     for index, row in edges.iterrows():
         print(index, 'of', total)
@@ -105,11 +106,12 @@ def build_graphs():
         if last_id != graph_id:
             last_id = graph_id
             current_graph = nx.Graph()
-
             if graph_class == 1:
                 all_graps1.append(current_graph)
-            else:
+            elif graph_class == 2:
                 all_graps2.append(current_graph)
+            else:
+                all_graps3.append(current_graph)
 
         if node1 not in current_graph:
             current_graph.add_node(node1)
@@ -119,49 +121,51 @@ def build_graphs():
 
         current_graph.add_edge(node1, node2)
 
-    return all_graps1, all_graps2
+    return all_graps1, all_graps2, all_graps3
 
 
-parse_files()
+# parse_files()
 
-'''
-graphs1, graphs2 = build_graphs()
 
-print("Total graphs:", len(graphs1) + len(graphs2))
-#nodes_avg = [len(g.nodes) for g in graphs]
-#print(sorted(nodes_avg))
-#nodes_avg = sorted(nodes_avg)
-#unique, counts = np.unique(nodes_avg, return_counts=True)
-#print(np.asarray((unique, counts)).T)
+graphs1, graphs2, graphs3 = build_graphs()
+
+nodes_avg = [len(g.nodes) for g in graphs1 + graphs2 + graphs3]
+
+print("Total graphs:", len(graphs1) + len(graphs2) + len(graphs3))
+print("Avg nodes:", np.mean(nodes_avg))
+
 
 k = 0
 for g in graphs1:
     rcm = list(reverse_cuthill_mckee_ordering(g))
     g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    plt.imsave('protein_img/1/' + str(k) + '.jpg', g_adj, cmap='gray')
+    plt.imsave('imdb/img/1/' + str(k) + '.jpg', g_adj, cmap='gray')
     k += 1
-
 
 k = 0
 for g in graphs2:
     rcm = list(reverse_cuthill_mckee_ordering(g))
     g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    plt.imsave('protein_img/2/' + str(k) + '.jpg', g_adj, cmap='gray')
+    plt.imsave('imdb/img/2/' + str(k) + '.jpg', g_adj, cmap='gray')
     k += 1
 
-
-'''
+k = 0
+for g in graphs3:
+    rcm = list(reverse_cuthill_mckee_ordering(g))
+    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
+    plt.imsave('imdb/img/3/' + str(k) + '.jpg', g_adj, cmap='gray')
+    k += 1
 
 '''
 for g in graphs:
     adj = nx.adjacency_matrix(g).toarray()
     print(adj)
-    print(np.shape(adj))'''
-
+    print(np.shape(adj))
 # generate_networks()
-'''graph = nx.barabasi_albert_graph(n=178, m=14, seed=5)
+graph = nx.barabasi_albert_graph(n=178, m=14, seed=5)
 node2vec = Node2Vec(graph, dimensions=64, workers=8)
 model = node2vec.fit()
 emb = model.wv.get_vector('12')
 print(np.shape(emb))
 print(emb)'''
+

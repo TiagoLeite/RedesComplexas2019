@@ -27,3 +27,9 @@ def plot_some_fig():
 
     plt.xlabel('Samples')
     plt.show()
+
+#nodes_avg = [len(g.nodes) for g in graphs]
+#print(sorted(nodes_avg))
+#nodes_avg = sorted(nodes_avg)
+#unique, counts = np.unique(nodes_avg, return_counts=True)
+#print(np.asarray((unique, counts)).T)

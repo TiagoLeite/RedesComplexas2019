@@ -79,13 +79,13 @@ def generate_networks():
 
 
 def parse_files():
-    indicator = pd.read_csv('graph_data/proteins/PROTEINS_full_graph_indicator.csv')
-    labels = pd.read_csv('graph_data/proteins/PROTEINS_full_graph_labels.csv')
+    indicator = pd.read_csv('imdb/IMDB-MULTI_graph_indicator.csv')
+    labels = pd.read_csv('imdb/IMDB-MULTI_graph_labels.csv')
     graph_ids = list((indicator['graph_id']))
     graph_class = [labels.iloc[graph_id - 1].values[0] for graph_id in graph_ids]
     indexes = list(np.arange(1, len(graph_ids) + 1))
     dataframe = pd.DataFrame(data={'node_id': indexes, 'graph_id': graph_ids, 'class': graph_class})
-    dataframe.to_csv('graph_data/proteins/node_graph_class.csv', index=False)
+    dataframe.to_csv('imdb/IMDB-MULTI_node_graph_class.csv', index=False)
 
 
 def build_graphs():
@@ -122,6 +122,9 @@ def build_graphs():
     return all_graps1, all_graps2
 
 
+parse_files()
+
+'''
 graphs1, graphs2 = build_graphs()
 
 print("Total graphs:", len(graphs1) + len(graphs2))
@@ -147,7 +150,7 @@ for g in graphs2:
     k += 1
 
 
-
+'''
 
 '''
 for g in graphs:

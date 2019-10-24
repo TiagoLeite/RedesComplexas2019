@@ -12,7 +12,7 @@ import cv2 as cv
 
 # random.seed(29)
 N_CLASSES = 2
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 
 
 def precision_score(y_true, y_pred):
@@ -53,17 +53,17 @@ def get_mobilenet_model():
 def get_model():
     input_layer = Input(shape=[None, None, 3])
 
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(input_layer)
+    x = Conv2D(filters=32, kernel_size=(5, 5), strides=(1, 1), padding='same', activation='relu')(input_layer)
     x = BatchNormalization()(x)
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
+    x = Conv2D(filters=32, kernel_size=(5, 5), strides=(2, 2), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = Conv2D(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = Conv2D(filters=512, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=512, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = GlobalMaxPooling2D()(x)
     x = Dense(units=128, activation='relu')(x)
@@ -92,7 +92,7 @@ datagen = ImageDataGenerator(preprocessing_function=None,
                              rescale=1.0/255.0,
                              # horizontal_flip=True,
                              # vertical_flip=True,
-                             validation_split=0.2)
+                             validation_split=0.1)
 
 train_gen = datagen.flow_from_directory('protein_img/',
                                         batch_size=BATCH_SIZE,

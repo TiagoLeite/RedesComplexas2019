@@ -9,11 +9,11 @@ import networkx.generators as gen
 import networkx as nx
 import uuid
 import random
+
 # from node2vec import Node2Vec
 
 
 random.seed(29)
-
 
 '''def save_image_graph_from_series(series, label):
     g = VisibilityGraph(series)
@@ -48,10 +48,8 @@ def avg_degree(g):
 
 
 def generate_networks():
-
     for k in range(1000):
         print(k)
-
         g = gen.watts_strogatz_graph(n=178, k=random.randrange(10, 100), p=.5)
         h = gen.barabasi_albert_graph(n=178, m=random.randrange(10, 100))
         j = gen.erdos_renyi_graph(n=178, p=random.random())
@@ -73,45 +71,38 @@ def generate_networks():
         plt.imsave('img/1/' + str(k) + '.jpg', h_adj, cmap='gray')
         plt.imsave('img/2/' + str(k) + '.jpg', j_adj, cmap='gray')
         plt.imsave('img/3/' + str(k) + '.jpg', m_adj, cmap='gray')
-
         # print(nx.number_of_edges(g), nx.number_of_edges(h), nx.number_of_edges(j))
-
         # print(avg_degree(g), avg_degree(h), avg_degree(j), avg_degree(m))
 
 
-def parse_files():
-    indicator = pd.read_csv('imdb/IMDB-MULTI_graph_indicator.csv')
-    labels = pd.read_csv('imdb/IMDB-MULTI_graph_labels.csv')
+def parse_files(folder_name, base_name):
+    indicator = pd.read_csv(folder_name + '/' + base_name + '_graph_indicator.csv')
+    labels = pd.read_csv(folder_name + '/' + base_name + '_graph_labels.csv')
     graph_ids = list((indicator['graph_id']))
     graph_class = [labels.iloc[graph_id - 1].values[0] for graph_id in graph_ids]
     indexes = list(np.arange(1, len(graph_ids) + 1))
     dataframe = pd.DataFrame(data={'node_id': indexes, 'graph_id': graph_ids, 'class': graph_class})
-    dataframe.to_csv('imdb/IMDB-MULTI_node_graph_class.csv', index=False)
+    dataframe.to_csv(folder_name + '/' + base_name + '_node_graph_class.csv', index=False)
 
 
-def build_graphs():
-    graph_data = pd.read_csv('imdb/IMDB-MULTI_node_graph_class.csv')
-    edges = pd.read_csv('imdb/IMDB-MULTI_A.csv')
+def build_graphs_from_files(folder_name, base_name, n_classes):
+    parse_files(folder_name, base_name)
+    graph_data = pd.read_csv(folder_name + '/' + base_name + '_node_graph_class.csv')
+    edges = pd.read_csv(folder_name + '/' + base_name + '_A.csv')
     total_graphs = len(graph_data['graph_id'].unique())
     print(total_graphs)
     last_id = -1
-    all_graps1, all_graps2, all_graps3 = [], [], []
+    all_graphs = [list() for _ in range(n_classes)]
     total = len(edges)
     for index, row in edges.iterrows():
         print(index, 'of', total)
         node1 = int(row['node1'])
         node2 = int(row['node2'])
         graph_id, graph_class = graph_data[graph_data['node_id'] == node1].iloc[0][['graph_id', 'class']]
-        # graph_class = graph_data[graph_data['node_id'] == node1].iloc[0]['class']
         if last_id != graph_id:
             last_id = graph_id
             current_graph = nx.Graph()
-            if graph_class == 1:
-                all_graps1.append(current_graph)
-            elif graph_class == 2:
-                all_graps2.append(current_graph)
-            else:
-                all_graps3.append(current_graph)
+            all_graphs[graph_class - 1].append(current_graph)
 
         if node1 not in current_graph:
             current_graph.add_node(node1)
@@ -121,51 +112,30 @@ def build_graphs():
 
         current_graph.add_edge(node1, node2)
 
-    return all_graps1, all_graps2, all_graps3
+    return all_graphs
 
 
-# parse_files()
+def build_images(all_graphs, folder_name):
+    class_count = -1
+    for graphs in all_graphs:  # gets all graphs from the same class
+        class_count += 1
+        k = 0
+        for g in graphs:
+            rcm = list(reverse_cuthill_mckee_ordering(g))
+            g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
+            plt.imsave(folder_name + '/img/' + str(class_count) + '/' + str(k) + '.jpg', g_adj, cmap='gray')
+            k += 1
+        print('Created', k, 'jpg images in folder ', folder_name + '/img/' + str(class_count) + '/')
 
 
-graphs1, graphs2, graphs3 = build_graphs()
-
-nodes_avg = [len(g.nodes) for g in graphs1 + graphs2 + graphs3]
-
-print("Total graphs:", len(graphs1) + len(graphs2) + len(graphs3))
-print("Avg nodes:", np.mean(nodes_avg))
-
-
-k = 0
-for g in graphs1:
-    rcm = list(reverse_cuthill_mckee_ordering(g))
-    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    plt.imsave('imdb/img/1/' + str(k) + '.jpg', g_adj, cmap='gray')
-    k += 1
-
-k = 0
-for g in graphs2:
-    rcm = list(reverse_cuthill_mckee_ordering(g))
-    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    plt.imsave('imdb/img/2/' + str(k) + '.jpg', g_adj, cmap='gray')
-    k += 1
-
-k = 0
-for g in graphs3:
-    rcm = list(reverse_cuthill_mckee_ordering(g))
-    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    plt.imsave('imdb/img/3/' + str(k) + '.jpg', g_adj, cmap='gray')
-    k += 1
-
-'''
-for g in graphs:
-    adj = nx.adjacency_matrix(g).toarray()
-    print(adj)
-    print(np.shape(adj))
-# generate_networks()
-graph = nx.barabasi_albert_graph(n=178, m=14, seed=5)
-node2vec = Node2Vec(graph, dimensions=64, workers=8)
-model = node2vec.fit()
-emb = model.wv.get_vector('12')
-print(np.shape(emb))
-print(emb)'''
-
+N_CLASSES = 3
+all_graphs = build_graphs_from_files('imdb', 'IMDB-MULTI', N_CLASSES)
+build_images(all_graphs, 'imdb')
+nodes = 0
+for k in range(N_CLASSES):
+    graphs_class = all_graphs[k]
+    nodes += np.sum([len(j.nodes) for j in graphs_class])
+total_graphs = np.sum(len(graphs_class) for graphs_class in all_graphs)
+nodes_mean = nodes / total_graphs
+print("Total graphs:", total_graphs)
+print("Avg nodes:", nodes_mean)

@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 import random
-
-from keras.callbacks import ReduceLROnPlateau
+from keras.callbacks import *
 from keras.layers import *
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras.applications.mobilenet_v2 import MobileNetV2
 from keras import backend as K
 import cv2 as cv
+from keras.optimizers import Adam, RMSprop
 
 # random.seed(29)
 N_CLASSES = 3
@@ -37,45 +37,8 @@ def recall_score(y_true, y_pred):
     return recall
 
 
-def get_mobilenet_model():
-    mobile = MobileNetV2(weights=None,
-                         input_tensor=Input(shape=(178, 178, 1)))
-    print(mobile.summary())
-    x = mobile.layers[-2].output  # -4 se for mobilenet v1
-    x = Dense(128, activation='relu')(x)
-    pred = Dense(N_CLASSES, activation='softmax')(x)
-    model = Model(inputs=mobile.input, outputs=pred)
-    model.compile(loss='categorical_crossentropy', optimizer='adam',
-                  metrics=['accuracy', precision_score, recall_score])
-    return model
-
-
-def get_mlp_model():
-
-    input_layer = Input(shape=[None, None, 3])
-
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(input_layer)
-    x = BatchNormalization()(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(input_layer)
-    x = BatchNormalization()(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(units=256, activation='relu')(x)
-    x = Dropout(0.5)(x)
-    x = Dense(units=64, activation='relu')(x)
-    x = Dropout(0.5)(x)
-    output = Dense(N_CLASSES, activation='softmax')(x)
-    model = Model(input=input_layer, output=output)
-    model.compile(loss='categorical_crossentropy', optimizer='adam',
-                  metrics=['accuracy', precision_score, recall_score])
-
-    return model
-
-
 def get_model():
     input_layer = Input(shape=[None, None, 3])
-
     x = Conv2D(filters=32, kernel_size=(5, 5), strides=(1, 1), padding='same', activation='relu')(input_layer)
     x = BatchNormalization()(x)
     x = Conv2D(filters=32, kernel_size=(5, 5), strides=(2, 2), padding='same', activation='relu')(x)
@@ -88,15 +51,14 @@ def get_model():
     x = Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
     x = Conv2D(filters=512, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
-    x = GlobalAveragePooling2D()(x)
-    # x = Flatten()(x)
+    x = GlobalMaxPooling2D()(x)
     x = Dense(units=128, activation='relu')(x)
     x = Dropout(0.5)(x)
     x = Dense(units=64, activation='relu')(x)
     x = Dropout(0.5)(x)
     output = Dense(N_CLASSES, activation='softmax')(x)
     model = Model(input=input_layer, output=output)
-    model.compile(loss='categorical_crossentropy', optimizer='adam',
+    model.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=1e-4),
                   metrics=['accuracy', precision_score, recall_score])
 
     return model
@@ -109,8 +71,8 @@ print(model.summary())
 # print(np.shape(image))
 
 
-reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                              patience=5, min_lr=0.00001)
+reduce_lr = ReduceLROnPlateau(monitor='val_acc', factor=0.2,
+                              patience=4, min_lr=0.00001)
 
 datagen = ImageDataGenerator(preprocessing_function=None,
                              rescale=1.0/255.0,
@@ -128,11 +90,14 @@ test_gen = datagen.flow_from_directory('imdb/img/',
                                        subset='validation',
                                        color_mode='rgb')
 
+
+csv_logger = CSVLogger('imdb/log/training.log')
+
 model.fit_generator(train_gen, steps_per_epoch=train_gen.samples // BATCH_SIZE + 1,
                     validation_data=test_gen,
                     validation_steps=test_gen.samples // BATCH_SIZE + 1,
                     epochs=100,
-                    verbose=1, callbacks=[reduce_lr],
+                    verbose=1, callbacks=[reduce_lr, csv_logger],
                     workers=-1)
 
 model.save('saved_model.h5')

@@ -9,11 +9,13 @@ import networkx.generators as gen
 import networkx as nx
 import uuid
 import random
-
+from numpy.random import seed
 # from node2vec import Node2Vec
 
 
-random.seed(29)
+random.seed(476)
+seed(1453)
+
 
 '''def save_image_graph_from_series(series, label):
     g = VisibilityGraph(series)
@@ -128,9 +130,9 @@ def build_images(all_graphs, folder_name):
         print('Created', k, 'jpg images in folder ', folder_name + '/img/' + str(class_count) + '/')
 
 
-N_CLASSES = 3
-all_graphs = build_graphs_from_files('imdb', 'IMDB-MULTI', N_CLASSES)
-build_images(all_graphs, 'imdb')
+N_CLASSES = 2
+all_graphs = build_graphs_from_files('proteins', 'PROTEINS_full', N_CLASSES)
+build_images(all_graphs, 'proteins')
 nodes = 0
 for k in range(N_CLASSES):
     graphs_class = all_graphs[k]

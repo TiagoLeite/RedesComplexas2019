@@ -53,8 +53,8 @@ def get_model():
     x = Conv2D(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=512, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
     x = BatchNormalization()(x)
     x = GlobalMaxPooling2D()(x)
     x = Dense(units=128, activation='relu')(x)
@@ -63,7 +63,7 @@ def get_model():
     x = Dropout(0.5)(x)
     output = Dense(N_CLASSES, activation='softmax')(x)
     model = Model(input=input_layer, output=output)
-    model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=2*1e-3),
+    model.compile(loss='categorical_crossentropy', optimizer='adam',
                   metrics=['accuracy', precision_score, recall_score])
 
     return model
@@ -78,7 +78,7 @@ datagen = ImageDataGenerator(preprocessing_function=None,
                              rescale=1.0/255.0,
                              # horizontal_flip=True,
                              # vertical_flip=True,
-                             validation_split=0.2)
+                             validation_split=0.1)
 DATA_FOLDER = 'proteins'
 print('Training for', DATA_FOLDER)
 train_gen = datagen.flow_from_directory(DATA_FOLDER + '/img/',

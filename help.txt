@@ -33,3 +33,13 @@ def plot_some_fig():
 #nodes_avg = sorted(nodes_avg)
 #unique, counts = np.unique(nodes_avg, return_counts=True)
 #print(np.asarray((unique, counts)).T)
+
+train_gen = datagen.flow_from_directory(DATA_FOLDER + '/img/',
+                                            batch_size=BATCH_SIZE,
+                                            subset='training',
+                                            color_mode='rgb')
+
+    test_gen = datagen.flow_from_directory(DATA_FOLDER + '/img/',
+                                           batch_size=BATCH_SIZE,
+                                           subset='validation',
+                                           color_mode='rgb')

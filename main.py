@@ -13,31 +13,8 @@ from numpy.random import seed
 from node2vec import Node2Vec
 from sklearn.preprocessing import minmax_scale
 
-
 random.seed(476)
 seed(1453)
-
-
-'''def save_image_graph_from_series(series, label):
-    g = VisibilityGraph(series)
-    adj = g.adjacency
-    g = nx.Graph(incoming_graph_data=adj)
-    rcm = list(reverse_cuthill_mckee_ordering(g))
-    adj2 = nx.adjacency_matrix(g, nodelist=rcm).toarray()
-    random_img_name = 'img/' + str(label) + '/' + str(uuid.uuid4().hex)[:10] + '.png'
-    plt.imsave(random_img_name, adj2, cmap='gray')
-    # g2 = nx.Graph(incoming_graph_data=adj2)
-    # print(nx.is_isomorphic(g, g2))
-
-
-def build_image_dataset():
-    data = pd.read_csv('signal.csv')
-    total = len(data)
-    for index, row in data.iterrows():
-        print(index, 'of', total)
-        label = row[-1]
-        series = np.array(row[1:-1])
-        save_image_graph_from_series(series, label)'''
 
 
 def avg_degree(g):
@@ -51,11 +28,11 @@ def avg_degree(g):
 
 
 def generate_networks(save_folder):
-    for k in range(400):
+    for k in range(1000):
         print(k)
-        g = gen.watts_strogatz_graph(n=128, k=20, p=.5)
-        h = gen.barabasi_albert_graph(n=128, m=11)
-        j = gen.erdos_renyi_graph(n=128, p=0.16)
+        g = gen.watts_strogatz_graph(n=128, k=20, p=.5, seed=1822)
+        h = gen.barabasi_albert_graph(n=128, m=11, seed=1889)
+        j = gen.erdos_renyi_graph(n=128, p=0.16, seed=1530)
         m = gen.random_regular_graph(d=20, n=128)
 
         rcm = list(reverse_cuthill_mckee_ordering(g))
@@ -149,14 +126,3 @@ def build_images_embeddings(all_graphs, folder_name):
 
 generate_networks('synthetic')
 
-'''N_CLASSES = 2
-all_graphs = build_graphs_from_files('proteins', 'PROTEINS_full', N_CLASSES)
-build_images(all_graphs, 'proteins')
-nodes = 0
-for k in range(N_CLASSES):
-    graphs_class = all_graphs[k]
-    nodes += np.sum([len(j.nodes) for j in graphs_class])
-total_graphs = np.sum(len(graphs_class) for graphs_class in all_graphs)
-nodes_mean = nodes / total_graphs
-print("Total graphs:", total_graphs)
-print("Avg nodes:", nodes_mean)'''

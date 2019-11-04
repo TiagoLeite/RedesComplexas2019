@@ -43,3 +43,16 @@ train_gen = datagen.flow_from_directory(DATA_FOLDER + '/img/',
                                            batch_size=BATCH_SIZE,
                                            subset='validation',
                                            color_mode='rgb')
+
+
+'''N_CLASSES = 2
+all_graphs = build_graphs_from_files('proteins', 'PROTEINS_full', N_CLASSES)
+build_images(all_graphs, 'proteins')
+nodes = 0
+for k in range(N_CLASSES):
+    graphs_class = all_graphs[k]
+    nodes += np.sum([len(j.nodes) for j in graphs_class])
+total_graphs = np.sum(len(graphs_class) for graphs_class in all_graphs)
+nodes_mean = nodes / total_graphs
+print("Total graphs:", total_graphs)
+print("Avg nodes:", nodes_mean)'''

@@ -10,7 +10,7 @@ import networkx as nx
 import uuid
 import random
 from numpy.random import seed
-from node2vec import Node2Vec
+# from node2vec import Node2Vec
 from sklearn.preprocessing import minmax_scale
 
 random.seed(476)
@@ -27,13 +27,58 @@ def avg_degree(g):
     return degrees_mean
 
 
+def sample(save_folder):
+
+    g = gen.watts_strogatz_graph(n=128, k=20, p=.5)
+
+    h = gen.barabasi_albert_graph(n=128, m=11)
+    j = gen.erdos_renyi_graph(n=128, p=0.16)
+    m = gen.random_regular_graph(d=20, n=128)
+
+    h = gen.barabasi_albert_graph(n=128, m=11)
+
+    g2 = gen.barabasi_albert_graph(n=128, m=11)
+
+    g_adj = nx.adjacency_matrix(g).toarray()
+    h_adj = nx.adjacency_matrix(h).toarray()
+    j_adj = nx.adjacency_matrix(j).toarray()
+    m_adj = nx.adjacency_matrix(m).toarray()
+
+    plt.imsave(save_folder + '/img/ws.jpg', g_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/ba.jpg', h_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/er.jpg', j_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/rr.jpg', m_adj, cmap='gray')
+
+    rcm = list(reverse_cuthill_mckee_ordering(g))
+    g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
+
+    rcm = list(reverse_cuthill_mckee_ordering(h))
+    h_adj = nx.adjacency_matrix(h, nodelist=rcm).toarray()
+
+    rcm = list(reverse_cuthill_mckee_ordering(j))
+    j_adj = nx.adjacency_matrix(j, nodelist=rcm).toarray()
+
+    rcm = list(reverse_cuthill_mckee_ordering(m))
+    m_adj = nx.adjacency_matrix(m, nodelist=rcm).toarray()
+
+    plt.imsave(save_folder + '/img/ws_rcm.jpg', g_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/ba_rcm.jpg', h_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/er_rcm.jpg', j_adj, cmap='gray')
+    plt.imsave(save_folder + '/img/rr_rcm.jpg', m_adj, cmap='gray')
+
+
 def generate_networks(save_folder):
+
     for k in range(1000):
+
         print(k)
-        g = gen.watts_strogatz_graph(n=128, k=20, p=.5, seed=1822)
-        h = gen.barabasi_albert_graph(n=128, m=11, seed=1889)
-        j = gen.erdos_renyi_graph(n=128, p=0.16, seed=1530)
+
+        g = gen.watts_strogatz_graph(n=128, k=20, p=.5)
+        h = gen.barabasi_albert_graph(n=128, m=11)
+        j = gen.erdos_renyi_graph(n=128, p=0.16)
         m = gen.random_regular_graph(d=20, n=128)
+
+        print(avg_degree(g), avg_degree(h), avg_degree(j), avg_degree(m))
 
         rcm = list(reverse_cuthill_mckee_ordering(g))
         g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()

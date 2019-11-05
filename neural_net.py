@@ -23,6 +23,9 @@ import pylab as pl
 from sklearn.preprocessing import normalize, StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from keras.utils import to_categorical
+import matplotlib.patches as mpatches
+from keras.models import load_model
+
 
 random.seed(1500)
 seed(1822)
@@ -51,49 +54,6 @@ def recall_score(y_true, y_pred):
     return recall
 
 
-def get_autoencoder():
-    input_layer = Input(shape=[128, 128, 3])
-    # x = GaussianNoise(0.25)(input_layer)
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(input_layer)
-    x = Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Flatten()(x)
-    encoder = Dense(units=256, activation='relu', name='encoder')(x)
-
-    x = Dense(units=2048, activation='relu')(encoder)
-    x = Reshape(target_shape=[4, 4, 128])(x)
-
-    # x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2DTranspose(128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(128, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-
-    # x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2DTranspose(128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(128, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-
-    # x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2DTranspose(128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(128, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-
-    # x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2DTranspose(64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(64, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-
-    # x = UpSampling2D(size=(2, 2))(x)
-    x = Conv2DTranspose(32, kernel_size=(3, 3), padding='same', strides=(2, 2), activation='relu')(x)
-    x = Conv2D(32, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu')(x)
-
-    output = Conv2D(3, kernel_size=(1, 1), padding='same', activation='sigmoid')(x)
-    # output = Dense(N_CLASSES, activation='softmax')(x)
-    model = Model(input=input_layer, output=output)
-    model.compile(loss='binary_crossentropy', optimizer='adam')
-    return model
-
-
 def k_folds(k, data_folder):
     X = glob(data_folder + '/img/*/*')
     y = [int(image.split('/')[-2]) for image in X]
@@ -118,29 +78,43 @@ def plot_pca(x_data, y_data, x_test, y_test, fold):
     comps_train = pca.fit_transform(X=x_data)
     comps_test = pca.fit_transform(X=x_test)
     pl.figure()
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22',
-              '#17becf']
+
+    colors = np.array(
+        ['#1f77b4', '#ff7f0e', '#2ca02c', '#9467bd', '#d62728', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22',
+         '#17becf'])
+
     color_map = [colors[y_data[k]] for k in range(len(y_data))]
+
     color_map_test = [colors[y_test[k]] for k in range(len(y_test))]
-    plt.scatter(comps_train[:, 0], comps_train[:, 1], c=color_map, marker='o')
-    plt.scatter(comps_test[:, 0], comps_test[:, 1], facecolors='w', edgecolors=color_map_test, marker='o')
-    plt.title('Plot')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.savefig(DATA_FOLDER + '/scatter' + str(fold) + '.png')
+
+    plt.scatter(comps_train[:, 0], comps_train[:, 1], c=color_map,
+                marker='o')
+
+    all_classes = list()
+
+    for k in range(N_CLASSES):
+        clazz = mpatches.Patch(color=colors[k], label='classe ' + str(k + 1))
+        all_classes.append(clazz)
+
+    plt.xlabel('x1')
+    plt.ylabel('x2')
+    plt.legend(handles=all_classes)
+    plt.savefig(DATA_FOLDER + '/scatter_' + str(fold) + '.png')
+    plt.close()
 
 
 def get_model():
     input_layer = Input(shape=IMAGE_SIZE)
     x = Conv2D(filters=32, kernel_size=(5, 5), strides=(1, 1), padding='same', activation='relu')(input_layer)
     x = Conv2D(filters=32, kernel_size=(5, 5), strides=(2, 2), padding='same', activation='relu')(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(1, 1), padding='same', activation='relu')(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
+    x = Conv2D(filters=64, kernel_size=(4, 4), strides=(1, 1), padding='same', activation='relu')(x)
+    x = Conv2D(filters=64, kernel_size=(4, 4), strides=(2, 2), padding='same', activation='relu')(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), strides=(2, 2), padding='same', activation='relu')(x)
     x = Flatten()(x)
     x = Dense(units=128, activation='relu', name='embedding_layer')(x)
+    x = Dropout(0.5)(x)
     output = Dense(N_CLASSES, activation='softmax')(x)
     model = Model(input=input_layer, output=output)
     model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=1e-4),
@@ -149,21 +123,34 @@ def get_model():
 
 
 def train_classification():
-    results = list()
+
     for k in range(K_FOLDS):
         print("==================== Fold ", k, "====================")
         print("Datasets:", 'train_' + str(k) + '.csv', 'test_' + str(k) + '.csv')
         print('Training for', DATA_FOLDER)
+
         model = get_model()
-        reduce_lr = ReduceLROnPlateau(monitor='val_acc', factor=0.5,
-                                      mode='max',
-                                      verbose=2,
-                                      patience=10,
-                                      min_lr=1e-6)
+        print(model.summary())
+
+        early_stopping = EarlyStopping(monitor='val_acc',
+                                       mode='max',
+                                       verbose=2,
+                                       min_delta=0.01,
+                                       patience=32)
+
+        checkpoint = ModelCheckpoint(DATA_FOLDER + '/ckpt/best_model_'+str(k)+'.h5',
+                                     monitor='val_acc',
+                                     save_best_only=True,
+                                     verbose=2,
+                                     save_weights_only=False,
+                                     mode='max', period=1)
+
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.8,
+                                      patience=10, verbose=2, mode='min',
+                                      min_delta=0.01, min_lr=1e-6)
+
         datagen = ImageDataGenerator(preprocessing_function=None,
                                      rescale=1.0/255.0)
-                                     #horizontal_flip=True,
-                                     #vertical_flip=True)
 
         train_df = pd.read_csv(DATA_FOLDER + '/crossval/train_' + str(k) + '.csv')
         val_df = pd.read_csv(DATA_FOLDER + '/crossval/test_' + str(k) + '.csv')
@@ -195,27 +182,46 @@ def train_classification():
                                                class_mode='categorical',
                                                batch_size=BATCH_SIZE,
                                                color_mode='rgb')
-        checkpoint = ModelCheckpoint(DATA_FOLDER+'/ckpt/'+str(k)+'_{val_acc:.4f}.h5',
-                                     monitor='val_acc',
-                                     save_best_only=True,
-                                     verbose=1,
-                                     save_weights_only=False,
-                                     mode='max', period=1)
+
         csv_logger = CSVLogger(DATA_FOLDER + '/log/training' + str(k) + '.log')
-        model.fit_generator(train_gen, steps_per_epoch=train_gen.samples // BATCH_SIZE + 1,
-                            validation_data=test_gen,
-                            validation_steps=test_gen.samples // BATCH_SIZE + 1,
-                            epochs=EPOCHS,
-                            verbose=2,
-                            callbacks=[csv_logger, checkpoint],
-                            workers=-1)
+        history = model.fit_generator(train_gen, steps_per_epoch=train_gen.samples // BATCH_SIZE + 1,
+                                      validation_data=test_gen,
+                                      validation_steps=test_gen.samples // BATCH_SIZE + 1,
+                                      epochs=EPOCHS,
+                                      verbose=2,
+                                      callbacks=[csv_logger, checkpoint, early_stopping, reduce_lr],
+                                      workers=-1)
+
+        pl.figure()
+        plt.plot(history.history['loss'], label='treino')
+        plt.plot(history.history['val_loss'], label='teste')
+        plt.xlabel('época')
+        plt.ylabel('custo')
+        plt.legend()
+        plt.show()
+        plt.savefig(DATA_FOLDER + '/history_loss_' + str(k) + '.png')
+
+        pl.figure()
+        plt.plot(history.history['acc'], label='treino')
+        plt.plot(history.history['val_acc'], label='teste')
+        plt.legend()
+        plt.xlabel('época')
+        plt.ylabel('acurácia')
+        plt.show()
+        plt.savefig(DATA_FOLDER + '/history_acc_' + str(k) + '.png')
+
+        plt.close()
+
+        model = load_model(DATA_FOLDER + '/ckpt/best_model_'+str(k)+'.h5',
+                           custom_objects={'recall_score': recall_score,
+                                           'precision_score': precision_score})
 
         preds = model.predict_generator(test_gen, workers=-1)
         preds = np.argmax(preds, axis=1)
         preds_cat = to_categorical(preds)
         labels_test_cat = to_categorical(labels_test)
         acc = accuracy_score(np.array(labels_test_cat), preds_cat)
-        print('Train acc:', acc)
+        print('Best train acc:', acc)
 
         code_model = Model(inputs=model.input, outputs=model.get_layer('embedding_layer').output)
         code_train = np.asarray(code_model.predict_generator(train_gen))
@@ -223,121 +229,18 @@ def train_classification():
         scaler = StandardScaler()
         code_train = scaler.fit_transform(code_train)
         code_test = scaler.fit_transform(code_test)
-        # code_train = normalize(code_train, axis=1)
-        # code_test = normalize(code_test, axis=1)
-        '''print("Training data size = ", code_train.shape)
-        print("Testing data size = ", code_test.shape)
-        print('Treinando SVM...')
-        clf = svm.LinearSVC(C=2, max_iter=100000)
-        clf.fit(code_train, labels_train)
-        print('Calculando score...')
-        preds = clf.predict(code_test)
-        np.save(DATA_FOLDER + '/preds_' + str(k) + '.npy', preds)
-        np.save(DATA_FOLDER + '/labels_' + str(k) + '.npy', labels_test)
-        np.save(DATA_FOLDER + '/encoding_' + str(k) + '.npy', code_test)
-        report = clf.score(code_test, labels_test)
-        results.append(report)
-        print('\nScore: ', report)'''
         plot_pca(code_train, labels_train, code_test, preds, k)
 
-    print('Final results:', results)
+    # print('Final results:', results)
 
 
-def train_autoencoder():
-    results = list()
-    for k in range(K_FOLDS):
-        print("==================== Fold ", k, "====================")
-        print("Datasets:", 'train_' + str(k) + '.csv', 'test_' + str(k) + '.csv')
-        print('Training for', DATA_FOLDER)
-        model = get_autoencoder()
-        if k == 0:
-            print(model.summary())
-        reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
-                                      mode='max',
-                                      verbose=2,
-                                      patience=10,
-                                      min_lr=1e-6)
-        datagen = ImageDataGenerator(preprocessing_function=None,
-                                     rescale=1.0 / 255.0,
-                                     horizontal_flip=True,
-                                     vertical_flip=True)
-
-        train_df = pd.read_csv(DATA_FOLDER + '/crossval/train_' + str(k) + '.csv')
-        val_df = pd.read_csv(DATA_FOLDER + '/crossval/test_' + str(k) + '.csv')
-
-        labels_train = train_df['class']
-        labels_test = val_df['class']
-
-        train_df['class'] = train_df['class'].apply(str)
-        val_df['class'] = val_df['class'].apply(str)
-
-        train_gen = datagen.flow_from_dataframe(dataframe=train_df,
-                                                directory=None,  # df already has absolute paths
-                                                x_col='image',
-                                                y_col='class',
-                                                shuffle=False,
-                                                interpolation='nearest',
-                                                target_size=(IMAGE_SIZE[0], IMAGE_SIZE[1]),
-                                                class_mode='input',
-                                                batch_size=BATCH_SIZE,
-                                                color_mode='rgb')
-
-        test_gen = datagen.flow_from_dataframe(dataframe=val_df,
-                                               directory=None,  # df already has absolute paths
-                                               x_col='image',
-                                               y_col='class',
-                                               target_size=(IMAGE_SIZE[0], IMAGE_SIZE[1]),
-                                               interpolation='nearest',
-                                               shuffle=False,
-                                               class_mode='input',
-                                               batch_size=BATCH_SIZE,
-                                               color_mode='rgb')
-
-        csv_logger = CSVLogger(DATA_FOLDER + '/log/training' + str(k) + '.log')
-        model.fit_generator(train_gen, steps_per_epoch=train_gen.samples // BATCH_SIZE + 1,
-                            validation_data=test_gen,
-                            validation_steps=test_gen.samples // BATCH_SIZE + 1,
-                            epochs=EPOCHS,
-                            shuffle=False,
-                            verbose=1,
-                            callbacks=[csv_logger],
-                            workers=-1)
-
-        code_model = Model(inputs=model.input, outputs=model.get_layer('encoder').output)
-        code_train = np.asarray(code_model.predict_generator(train_gen))
-        code_test = np.asarray(code_model.predict_generator(test_gen))
-        scaler = StandardScaler()
-        code_train = scaler.fit_transform(code_train)
-        code_test = scaler.fit_transform(code_test)
-        # code_train = normalize(code_train, axis=1)
-        # code_test = normalize(code_test, axis=1)
-        print("Training data size = ", code_train.shape)
-        print("Testing data size = ", code_test.shape)
-        print('Treinando SVM...')
-        clf = svm.LinearSVC(C=2, max_iter=100000)
-        clf.fit(code_train, labels_train)
-        print('Calculando score...')
-        preds = clf.predict(code_test)
-        np.save(DATA_FOLDER + '/preds_' + str(k) + '.npy', preds)
-        np.save(DATA_FOLDER + '/labels_' + str(k) + '.npy', labels_test)
-        np.save(DATA_FOLDER + '/encoding_' + str(k) + '.npy', code_test)
-        report = clf.score(code_test, labels_test)
-        results.append(report)
-        print('\nScore: ', report)
-        plot_pca(code_train, labels_train, k)
-    print(results)
-
-
-DATA_FOLDER = input('Dataset: proteins, imdb, synthetic: ')
+DATA_FOLDER = input('Dataset: proteins, imdb, synthetic, DD: ')
 N_CLASSES = int(input('Number of classes: '))
 IMAGE_SIZE = [int(input('Image shape:')), int(input()), int(input())]
 print('Image shape:', IMAGE_SIZE)
-# DATA_FOLDER = 'proteins'
-# N_CLASSES = 2
 BATCH_SIZE = 128
 K_FOLDS = 10
-EPOCHS = 100
+EPOCHS = 300
 
 k_folds(K_FOLDS, DATA_FOLDER)
 train_classification()
-# train_autoencoder()

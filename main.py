@@ -30,14 +30,9 @@ def avg_degree(g):
 def sample(save_folder):
 
     g = gen.watts_strogatz_graph(n=128, k=20, p=.5)
-
     h = gen.barabasi_albert_graph(n=128, m=11)
     j = gen.erdos_renyi_graph(n=128, p=0.16)
     m = gen.random_regular_graph(d=20, n=128)
-
-    h = gen.barabasi_albert_graph(n=128, m=11)
-
-    g2 = gen.barabasi_albert_graph(n=128, m=11)
 
     g_adj = nx.adjacency_matrix(g).toarray()
     h_adj = nx.adjacency_matrix(h).toarray()
@@ -78,8 +73,12 @@ def generate_networks(save_folder):
         j = gen.erdos_renyi_graph(n=128, p=0.16)
         m = gen.random_regular_graph(d=20, n=128)
 
-        print(avg_degree(g), avg_degree(h), avg_degree(j), avg_degree(m))
+        g_adj = nx.adjacency_matrix(g).toarray()
+        h_adj = nx.adjacency_matrix(h).toarray()
+        j_adj = nx.adjacency_matrix(j).toarray()
+        m_adj = nx.adjacency_matrix(m).toarray()
 
+        '''print(avg_degree(g), avg_degree(h), avg_degree(j), avg_degree(m))
         rcm = list(reverse_cuthill_mckee_ordering(g))
         g_adj = nx.adjacency_matrix(g, nodelist=rcm).toarray()
 
@@ -90,7 +89,7 @@ def generate_networks(save_folder):
         j_adj = nx.adjacency_matrix(j, nodelist=rcm).toarray()
 
         rcm = list(reverse_cuthill_mckee_ordering(m))
-        m_adj = nx.adjacency_matrix(m, nodelist=rcm).toarray()
+        m_adj = nx.adjacency_matrix(m, nodelist=rcm).toarray()'''
 
         plt.imsave(save_folder+'/img/0/' + str(k) + '.jpg', g_adj, cmap='gray')
         plt.imsave(save_folder+'/img/1/' + str(k) + '.jpg', h_adj, cmap='gray')
@@ -169,5 +168,18 @@ def build_images_embeddings(all_graphs, folder_name):
         print('Created', k, 'jpg images in folder ', folder_name + '/img/' + str(class_count) + '/')
 
 
-generate_networks('synthetic')
+# generate_networks('synthetic')
 
+# sample('synthetic')
+
+N_CLASSES = 2
+all_graphs = build_graphs_from_files('DD', 'DD', N_CLASSES)
+build_images(all_graphs, 'DD')
+nodes = 0
+for k in range(N_CLASSES):
+    graphs_class = all_graphs[k]
+    nodes += np.sum([len(j.nodes) for j in graphs_class])
+total_graphs = np.sum(len(graphs_class) for graphs_class in all_graphs)
+nodes_mean = nodes / total_graphs
+print("Total graphs:", total_graphs)
+print("Avg nodes:", nodes_mean)

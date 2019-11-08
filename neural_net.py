@@ -5,53 +5,54 @@ from keras.callbacks import *
 from keras.layers import *
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications.mobilenet_v2 import MobileNetV2
 from keras import backend as K
-import cv2 as cv
-from keras.optimizers import Adam, RMSprop
+from keras.optimizers import Adam
 from numpy.random import seed
 from tensorflow import set_random_seed
 from sklearn.model_selection import StratifiedKFold
 from glob import glob
-from sklearn import svm
-from sklearn.metrics import classification_report
-from sklearn.ensemble import GradientBoostingClassifier
-from xgboost import XGBClassifier
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import pylab as pl
-from sklearn.preprocessing import normalize, StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score
+from sklearn.preprocessing import StandardScaler
 from keras.utils import to_categorical
 import matplotlib.patches as mpatches
 from keras.models import load_model
-
+from sklearn.metrics import accuracy_score
 
 random.seed(1500)
 seed(1822)
 set_random_seed(1889)
 
 
-def precision_score(y_true, y_pred):
+def precision(y_true, y_pred):
     """Precision metric.
     Only computes a batch-wise average of precision.
     Computes the precision, a metric for multi-label classification of
-    how many selected items are relevant."""
+    how many selected items are relevant.
+    """
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
     precision = true_positives / (predicted_positives + K.epsilon())
     return precision
 
 
-def recall_score(y_true, y_pred):
+def recall(y_true, y_pred):
     """Recall metric.
     Only computes a batch-wise average of recall.
     Computes the recall, a metric for multi-label classification of
-    how many relevant items are selected."""
+    how many relevant items are selected.
+    """
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
     recall = true_positives / (possible_positives + K.epsilon())
     return recall
+
+
+def f_score(y_true, y_pred):
+    prec = precision(y_true, y_pred)
+    rec = recall(y_true, y_pred)
+    return 2*((prec*rec)/(prec+rec+K.epsilon()))
 
 
 def k_folds(k, data_folder):
@@ -74,9 +75,9 @@ def k_folds(k, data_folder):
 
 
 def plot_pca(x_data, y_data, x_test, y_test, fold):
+
     pca = PCA(n_components=2)
     comps_train = pca.fit_transform(X=x_data)
-    comps_test = pca.fit_transform(X=x_test)
     pl.figure()
 
     colors = np.array(
@@ -84,8 +85,6 @@ def plot_pca(x_data, y_data, x_test, y_test, fold):
          '#17becf'])
 
     color_map = [colors[y_data[k]] for k in range(len(y_data))]
-
-    color_map_test = [colors[y_test[k]] for k in range(len(y_test))]
 
     plt.scatter(comps_train[:, 0], comps_train[:, 1], c=color_map,
                 marker='o')
@@ -118,7 +117,7 @@ def get_model():
     output = Dense(N_CLASSES, activation='softmax')(x)
     model = Model(input=input_layer, output=output)
     model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=1e-4),
-                  metrics=['accuracy', precision_score, recall_score])
+                  metrics=['accuracy', precision, recall, f_score])
     return model
 
 
@@ -213,8 +212,9 @@ def train_classification():
         plt.close()
 
         model = load_model(DATA_FOLDER + '/ckpt/best_model_'+str(k)+'.h5',
-                           custom_objects={'recall_score': recall_score,
-                                           'precision_score': precision_score})
+                           custom_objects={'recall': recall,
+                                           'precision': precision,
+                                           'f_score': f_score})
 
         preds = model.predict_generator(test_gen, workers=-1)
         preds = np.argmax(preds, axis=1)
@@ -231,7 +231,62 @@ def train_classification():
         code_test = scaler.fit_transform(code_test)
         plot_pca(code_train, labels_train, code_test, preds, k)
 
-    # print('Final results:', results)
+
+def evaluate(DATA_FOLDER, k):
+
+    datagen = ImageDataGenerator(preprocessing_function=None,
+                                 rescale=1.0 / 255.0)
+
+    train_df = pd.read_csv(DATA_FOLDER + '/crossval/train_' + str(k) + '.csv')
+    val_df = pd.read_csv(DATA_FOLDER + '/crossval/test_' + str(k) + '.csv')
+
+    labels_train = train_df['class']
+    labels_test = val_df['class']
+
+    train_df['class'] = train_df['class'].apply(str)
+    val_df['class'] = val_df['class'].apply(str)
+
+    train_gen = datagen.flow_from_dataframe(dataframe=train_df,
+                                            directory=None,  # df already has absolute paths
+                                            x_col='image',
+                                            y_col='class',
+                                            shuffle=False,
+                                            interpolation='nearest',
+                                            target_size=(IMAGE_SIZE[0], IMAGE_SIZE[1]),
+                                            class_mode='categorical',
+                                            batch_size=BATCH_SIZE,
+                                            color_mode='rgb')
+
+    test_gen = datagen.flow_from_dataframe(dataframe=val_df,
+                                           directory=None,  # df already has absolute paths
+                                           x_col='image',
+                                           y_col='class',
+                                           target_size=(IMAGE_SIZE[0], IMAGE_SIZE[1]),
+                                           interpolation='nearest',
+                                           shuffle=False,
+                                           class_mode='categorical',
+                                           batch_size=BATCH_SIZE,
+                                           color_mode='rgb')
+
+    model = load_model(DATA_FOLDER + '/ckpt/best_model_' + str(k) + '.h5',
+                       custom_objects={'recall': recall,
+                                       'precision': precision,
+                                       'f_score': f_score})
+
+    preds = model.predict_generator(test_gen, workers=-1)
+    preds = np.argmax(preds, axis=1)
+    preds_cat = to_categorical(preds)
+    labels_test_cat = to_categorical(labels_test)
+    acc = accuracy_score(np.array(labels_test_cat), preds_cat)
+    print('Best train acc:', acc)
+
+    code_model = Model(inputs=model.input, outputs=model.get_layer('embedding_layer').output)
+    code_train = np.asarray(code_model.predict_generator(train_gen))
+    code_test = np.asarray(code_model.predict_generator(test_gen))
+    scaler = StandardScaler()
+    code_train = scaler.fit_transform(code_train)
+    code_test = scaler.fit_transform(code_test)
+    plot_pca(code_train, labels_train, code_test, preds, k)
 
 
 DATA_FOLDER = input('Dataset: proteins, imdb, synthetic, DD: ')
@@ -244,3 +299,5 @@ EPOCHS = 300
 
 k_folds(K_FOLDS, DATA_FOLDER)
 train_classification()
+
+# evaluate('synthetic', 0)
